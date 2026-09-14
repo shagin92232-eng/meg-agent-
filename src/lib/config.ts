@@ -25,6 +25,15 @@ function bool(key: string, fallback = false): boolean {
   return v === "true" || v === "1";
 }
 
+export function normalizeSupabaseUrl(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.endsWith("/rest/v1")) return trimmed.slice(0, -"/rest/v1".length);
+  if (trimmed.endsWith("/rest/v1/")) return trimmed.slice(0, -"/rest/v1/".length);
+  if (trimmed.includes("/rest/v1/")) return trimmed.split("/rest/v1/")[0];
+  return trimmed;
+}
+
 export const env = {
   app: {
     name: str("NEXT_PUBLIC_APP_NAME", "Messenger AI Agent"),
@@ -32,10 +41,11 @@ export const env = {
     devMode: bool("NEXT_PUBLIC_DEV_MODE", true),
   },
   supabase: {
-    url: str("NEXT_PUBLIC_SUPABASE_URL"),
-    anonKey: str("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    url: normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? ""),
+    anonKey: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "",
     // service role key is intentionally NOT exposed via NEXT_PUBLIC_
     serviceRoleKey: str("SUPABASE_SERVICE_ROLE_KEY"),
+    storageBucket: str("SUPABASE_STORAGE_BUCKET", "kb-documents"),
   },
   gemini: {
     apiKey: str("GEMINI_API_KEY"),

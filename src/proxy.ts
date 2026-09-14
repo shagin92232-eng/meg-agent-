@@ -1,5 +1,5 @@
 /**
- * Next.js middleware — enforces authentication for protected routes.
+ * Next.js proxy — enforces authentication for protected routes.
  *
  * Public paths: /login, /api/auth/*, /api/webhook/messenger, /api/dev/*,
  * static assets. Everything else requires a valid Supabase session; on failure
@@ -8,17 +8,21 @@
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { env } from "@/lib/config";
+import { createServerClient as createSsrServerClient } from "@supabase/ssr";
+import { normalizeSupabaseUrl } from "@/lib/config";
 
 const PUBLIC_PREFIXES = ["/login", "/api/auth/", "/api/webhook/messenger", "/api/dev/", "/_next/", "/favicon.ico", "/api/health"];
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (PUBLIC_PREFIXES.some((p) => pathname.startsWith(p) || pathname === p)) return NextResponse.next();
 
   const response = NextResponse.next();
-  const supabase = createClient(env.supabase.url, env.supabase.anonKey, {
+  const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+  if (!url || !anonKey) return NextResponse.redirect(new URL("/login", request.url));
+
+  const supabase = createSsrServerClient(url, anonKey, {
     cookies: {
       getAll: () => request.cookies.getAll(),
       setAll: (cookiesToSet) =>
@@ -26,13 +30,18 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) {
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error || !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(url);
   }
+
   return response;
 }
 

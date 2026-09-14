@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const stateParam = request.nextUrl.searchParams.get("state") || "";
   const savedState = request.cookies.get("meta_oauth_state")?.value;
-  const returnToCookie = request.cookies.get("meta_oauth_return")?.value || "/settings";
+  const returnToCookie = request.cookies.get("meta_oauth_return")?.value || "/dashboard/settings";
 
   if (!code) return new Response("Missing code", { status: 400 });
   const stateParts = stateParam.split("|");
@@ -52,7 +52,7 @@ export async function GET(request: NextRequest) {
       connected: true,
       webhook_verified: false,
       synced_at: new Date().toISOString(),
-    });
+    }, { onConflict: "org_id,page_id" });
     if (upErr) throw new Error(`Saving connection failed: ${upErr.message}`);
 
     // Subscribe the Page to webhook fields (best effort — real webhook is created in the app dashboard).

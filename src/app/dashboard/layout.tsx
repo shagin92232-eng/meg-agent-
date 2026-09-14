@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Sidebar } from "@/components/Sidebar";
 import { Header } from "@/components/Header";
+import { createBrowserClient } from "@/lib/supabase/client";
 
 export default function DashboardLayout({
   children,
@@ -12,8 +14,19 @@ export default function DashboardLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarOpenMobile, setSidebarOpenMobile] = useState(false);
   const [isClient, setIsClient] = useState(false); // To avoid hydration mismatch on screen size checks
+  const router = useRouter();
 
   useEffect(() => {
+    const supabase = createBrowserClient();
+    void supabase.auth.getSession().then((result) => {
+      const sessionExists = Boolean(result.data.session);
+      const hasSessionError = Boolean(result.error);
+
+      if (!sessionExists && !hasSessionError) {
+        router.replace("/login");
+      }
+    });
+
     setIsClient(true);
     const checkScreen = () => {
       if (window.innerWidth < 1024) {
@@ -25,7 +38,7 @@ export default function DashboardLayout({
     checkScreen();
     window.addEventListener('resize', checkScreen);
     return () => window.removeEventListener('resize', checkScreen);
-  }, []);
+  }, [router]);
 
   return (
     <div className="min-h-screen bg-[var(--background)] flex bg-pattern">
@@ -50,10 +63,8 @@ export default function DashboardLayout({
       {/* Main Content Area */}
       <div 
         className="flex-1 flex flex-col min-w-0 transition-all duration-300"
-        style={{ 
-          marginLeft: typeof window !== 'undefined' && window.innerWidth >= 1024 
-            ? (collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-width)")
-            : "0" 
+        style={{
+          marginLeft: collapsed ? "var(--sidebar-collapsed)" : "var(--sidebar-width)"
         }}
       >
         <Header collapsed={collapsed} setSidebarOpenMobile={setSidebarOpenMobile} />

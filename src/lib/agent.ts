@@ -52,7 +52,9 @@ export async function loadSettings(orgId: string): Promise<OrgSettings> {
     ]);
   if (error) throw error;
   const map: Record<string, any> = {};
-  for (const row of data ?? []) map[row.key] = typeof row.value === "string" ? JSON.parse(row.value) : row.value;
+  for (const row of data ?? []) {
+    map[row.key] = row.value;
+  }
   return { ...DEFAULT_SETTINGS, ...map } as OrgSettings;
 }
 

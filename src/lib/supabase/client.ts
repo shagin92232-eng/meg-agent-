@@ -1,15 +1,29 @@
 /**
- * Browser-side Supabase client. Uses the public anon key + browser storage.
+ * Browser-side Supabase client. Uses the public anon key + SSR cookie storage.
  * Never touches the service_role key.
  */
-import { createClient } from "@supabase/supabase-js";
-import { env } from "@/lib/config";
+import { createBrowserClient as createSsrBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { normalizeSupabaseUrl } from "@/lib/config";
 
-let browserClient: ReturnType<typeof createClient> | null = null;
+let browserClient: SupabaseClient<any, "public"> | null = null;
 
-export function createBrowserClient() {
+export function createBrowserClient(): SupabaseClient<any, "public"> {
   if (!browserClient) {
-    browserClient = createClient(env.supabase.url, env.supabase.anonKey);
+    const url = normalizeSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL ?? "");
+    const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
+
+    if (!url) {
+      throw new Error("supabaseUrl is required");
+    }
+    if (!anonKey) {
+      throw new Error("supabaseAnonKey is required");
+    }
+
+    browserClient = createSsrBrowserClient(url, anonKey, {
+      isSingleton: true,
+    });
   }
+
   return browserClient;
 }

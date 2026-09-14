@@ -41,7 +41,10 @@ export async function handleMessengerPost(rawBody: string, signature: string | u
     const seen = new Set<string>();
   for (const entry of body.entry || []) {
     const pageId = entry.id;
+    console.log("[webhook-debug] raw parsed body entry.id:", pageId);
+    console.log("[webhook-debug] processing entry.id:", pageId);
     const orgId = await resolveOrgByPage(pageId);
+    console.log("[webhook-debug] resolveOrgByPage(pageId) result:", { pageId, orgId });
     if (!orgId) continue; // Page not connected in this deployment
     for (const ev of entry.messaging || []) {
       const key = `${pageId}:${ev?.sender?.id ?? "?"}:${ev?.message?.mid ?? ev?.timestamp}`;
@@ -66,6 +69,9 @@ async function resolveOrgByPage(pageId: string): Promise<string | null> {
 
 async function handleMessagingEvent(orgId: string, pageId: string, ev: any): Promise<void> {
   try {
+    console.log("[webhook-debug] handleMessagingEvent sender id:", ev.sender?.id);
+    console.log("[webhook-debug] handleMessagingEvent message text:", ev.message?.text ?? null);
+
     // Skip outbound echoes except to mark delivery status.
         if (ev.message?.is_echo) {
       await markEchoDelivered(ev.message?.mid, orgId);
@@ -97,7 +103,9 @@ async function handleMessagingEvent(orgId: string, pageId: string, ev: any): Pro
       mid: ev.message?.mid ?? null, timestamp: ev.timestamp,
     };
 
+    console.log("[webhook-debug] handleMessagingEvent receiveCustomerMessage called:", true);
     const result = await receiveCustomerMessage(orgId, pageId, incoming);
+    console.log("[webhook-debug] handleMessagingEvent receiveCustomerMessage returned:", result);
 
     // Notify agents of a new conversation (only when it's the first message).
     const conv = result && (await findConv(result.conversation_id));

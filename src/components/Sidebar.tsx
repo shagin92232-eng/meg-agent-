@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { 
   LayoutDashboard, 
@@ -22,10 +23,25 @@ export function Sidebar({
   setCollapsed: (v: boolean) => void 
 }) {
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/conversations?limit=100", { credentials: "same-origin" })
+      .then((r) => r.ok ? r.json() : Promise.reject(r))
+      .then((payload) => {
+        if (!active) return;
+        const rows = Array.isArray(payload?.data) ? payload.data : [];
+        const count = rows.filter((row: any) => Number(row.unread_count ?? 0) > 0).length;
+        setUnreadCount(count);
+      })
+      .catch(() => setUnreadCount(0));
+    return () => { active = false; };
+  }, []);
 
   const navItems = [
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Conversations", href: "/dashboard/conversations", icon: MessageSquare, badge: "3" },
+    { name: "Conversations", href: "/dashboard/conversations", icon: MessageSquare, badge: unreadCount > 0 ? String(unreadCount) : undefined },
     { name: "Products", href: "/dashboard/products", icon: Package },
     { name: "Orders", href: "/dashboard/orders", icon: ShoppingCart },
     { name: "Knowledge Base", href: "/dashboard/knowledge", icon: BookOpen },

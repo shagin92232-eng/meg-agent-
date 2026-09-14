@@ -97,7 +97,7 @@ export async function processKbDocument(orgId: string, docId: string): Promise<{
 
   await supabase.from("kb_documents").update({ status: "processing", error: null }).eq("id", docId);
 
-  const { data: blob, error: dlErr } = await supabase.storage.from("kb-documents").download(doc.storage_path);
+  const { data: blob, error: dlErr } = await supabase.storage.from(env.supabase.storageBucket).download(doc.storage_path);
   if (dlErr || !blob) {
     const msg = `Failed to download document: ${dlErr?.message}`;
     await supabase.from("kb_documents").update({ status: "failed", error: msg }).eq("id", docId);

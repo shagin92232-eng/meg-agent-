@@ -33,9 +33,14 @@ export async function POST(request: Request) {
   const pageId = conn?.page_id || "dev-page";
 
   const incoming: IncomingEvent = {
-    message_id: message_id || `sim_${Date.now()}`,
-    from: { id: psid, name: name ?? "Test Customer", psid },
-    message: attachment ? { ...attachment, text: text ?? "" } : { text: text ?? "", ...(attachment ? { attachment } : {}) },
+    orgId: session.orgId,
+    pageId,
+    psid,
+    customerName: name ?? "Test Customer",
+    customerLocale: null,
+    text: text ?? null,
+    attachments: attachment ? [{ type: attachment.type ?? "file", url: attachment.url ?? "", mime_type: attachment.mime_type ?? null, file_name: attachment.file_name ?? null }] : [],
+    mid: message_id || `sim_${Date.now()}`,
     timestamp: Date.now(),
   };
 

@@ -77,6 +77,7 @@ export type Conversation = {
   is_important: boolean;
   order_id?: UUID | null;
   assigned_agent_id?: UUID | null;
+  metadata?: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 };
@@ -109,7 +110,7 @@ export type Product = {
   name: string;
   description?: string | null;
   price?: number | null;
-  currency?: string | null;
+  currency: string;
   stock?: number | null;
   sku?: string | null;
   barcode?: string | null;
@@ -197,6 +198,7 @@ export type NotificationType =
   | "new_order"
   | "order_confirmation"
   | "kb_processed"
+  | "meta_connected"
   | "meta_disconnected"
   | "ai_error";
 

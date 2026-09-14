@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     connected: true,
     webhook_verified: false,
     synced_at: new Date().toISOString(),
-  });
+  }, { onConflict: "org_id,page_id" });
   if (error) return jsonError(`Connection failed: ${error.message}`, 500);
 
   void createNotification(session.orgId, "meta_connected", "Page connected (dev)", `Page ${page_name || page_id} connected in dev mode.`);

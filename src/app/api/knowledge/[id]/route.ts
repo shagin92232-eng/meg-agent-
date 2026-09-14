@@ -26,7 +26,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const { error } = await supabase.from("kb_documents").update({ status: "processing" }).eq("id", id).eq("org_id", session.orgId);
     if (error) return jsonError(error.message, 500);
     // Trigger background processing (non-blocking).
-    void processKbDocument(id);
+    void processKbDocument(session.orgId, id);
   }
 
   const { data, error } = await supabase.from("kb_documents").select("*").eq("id", id).eq("org_id", session.orgId).single();

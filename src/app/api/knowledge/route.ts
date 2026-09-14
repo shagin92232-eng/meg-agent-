@@ -66,7 +66,7 @@ export async function DELETE(request: Request) {
     console.warn("[kb] storage delete failed:", e);
   }
   // Delete chunks + document.
-    await supabase.from("kb_chunks").delete().eq("document_id", id);
+  await supabase.from("kb_chunks").delete().eq("document_id", id);
   const { error } = await supabase.from("kb_documents").delete().eq("id", id).eq("org_id", session.orgId);
   if (error) return jsonError(error.message, 500);
   return json({ ok: true });

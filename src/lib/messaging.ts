@@ -109,6 +109,7 @@ export async function insertCustomerMessage(conversationId: string, orgId: strin
     if (existing) return [];
   }
   const hasAttachments = ev.attachments && ev.attachments.length;
+  const attachment = hasAttachments ? ev.attachments?.[0] : undefined;
   const { data, error } = await supabase
     .from("messages")
     .insert({
@@ -117,15 +118,15 @@ export async function insertCustomerMessage(conversationId: string, orgId: strin
       sender_role: "customer",
       message_type: hasAttachments ? "file" : "text",
       content: ev.text ?? null,
-      mime_type: hasAttachments ? ev.attachments![0].mime_type ?? null : null,
-      url: hasAttachments ? ev.attachments![0].url ?? null : null,
+      mime_type: attachment?.mime_type ?? undefined,
+      url: attachment?.url ?? undefined,
       metadata: { attachments: ev.attachments ?? [] },
       mid: ev.mid ?? null,
       status: "delivered",
     })
     .select("*");
   if (error) throw error;
-  await updateConversationAfterMessage(conversationId, orgId, { sender: "customer", preview: ev.text });
+  await updateConversationAfterMessage(conversationId, orgId, { sender: "customer", preview: ev.text ?? undefined });
   return data as Message[];
 }
 

@@ -47,13 +47,18 @@ export async function generateAndSendReply(
 ): Promise<{ text: string } | null> {
   const supabase = createAdminClient();
   const settings = await loadSettings(orgId);
+  console.log("[agent-debug] settings.ai_enabled:", settings.ai_enabled);
   if (!settings.ai_enabled) return null;
 
   const ctx = await buildConversationContext(orgId, conversationId);
+  console.log("[agent-debug] ctx.conversation?.ai_mode:", ctx.conversation?.ai_mode);
+  console.log("[agent-debug] ctx.conversation exists:", Boolean(ctx.conversation));
   if (!ctx.conversation || !ctx.conversation.ai_mode) return null; // Human Mode: do not auto-reply
 
   const customerRows = ctx.messages.filter((m) => m.sender_role === "customer");
   const latest = customerRows[customerRows.length - 1];
+  console.log("[agent-debug] latest exists:", Boolean(latest));
+  console.log("[agent-debug] latest content:", latest?.content ?? null);
   if (!latest) return null;
 
   const query = latest.content || "";
@@ -67,11 +72,14 @@ export async function generateAndSendReply(
   ]);
 
   const parts = await buildUserContent(ctx, latest, kb, products, intent, orderIntent, connection);
+  console.log("[agent-debug] geminiGenerateText query:", query);
+  console.log("[agent-debug] geminiGenerateText intent:", intent);
   const { text: reply, usage } = await geminiGenerateText(await buildSystemPrompt(settings), parts, {
     temperature: settings.ai_temperature,
     maxOutputTokens: settings.ai_max_output_tokens,
     topP: settings.ai_top_p,
   });
+  console.log("[agent-debug] geminiGenerateText reply first 100 chars:", reply?.slice(0, 100));
 
   let text = reply;
   let transfer = NEEDS_HUMAN_RE.test(text);
@@ -88,6 +96,9 @@ export async function generateAndSendReply(
     void createNotification(orgId, "human_requested", "Human assistance requested", "AI flagged this conversation for a human agent.");
   }
 
+  console.log("[agent-debug] branch before postAiReply/storeAiMessageOnly:", connection?.page_access_token ? "postAiReply" : "storeAiMessageOnly");
+  console.log("[agent-debug] connection.page_access_token exists:", Boolean(connection?.page_access_token));
+  console.log("[agent-debug] ctx.customer?.psid exists:", Boolean(ctx.customer?.psid));
   if (connection?.page_access_token && ctx.customer?.psid) {
     await postAiReply(conversationId, orgId, text, connection.page_id, connection.page_access_token, ctx.customer.psid);
   } else {

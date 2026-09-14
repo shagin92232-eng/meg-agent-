@@ -104,7 +104,7 @@ export async function getPage(pageId: string, pageToken: string): Promise<PageIn
 export async function subscribePageToWebhooks(
   pageId: string,
   pageToken: string,
-  fields: string[] = ["messages", "message_echo", "message_reads", "message_reactions"]
+  fields: string[] = ["messages", "message_echoes", "message_reads", "message_reactions"]
 ) {
   return graphRequest(pageId + "/subscribed_apps", pageToken, { method: "POST", body: { subscribed_fields: fields } });
 }

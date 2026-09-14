@@ -32,7 +32,7 @@ export async function geminiEmbed(text: string, taskType: EmbeddingTaskType = "R
   if (!text || !text.trim()) return [];
   const body = {
     content: { parts: [{ text }], role: "user" },
-    config: { taskType },
+    taskType,
   };
   const data = await embedFetch(body);
   // Support both single-embedding and batch response shapes defensively.

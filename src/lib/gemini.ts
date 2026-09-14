@@ -13,7 +13,7 @@ import { env } from "@/lib/config";
 
 export type GeminiContentPart =
   | { text: string }
-  | { inline_data: { mime_type: string; data: string } }; // base64 image bytes
+  | { inline_data: { mime_type: string; data: string } };
 
 export type GeminiContent = {
   role: "user" | "model";
@@ -43,8 +43,8 @@ export class GeminiError extends Error {
 }
 
 /** Convert raw image bytes into a Gemini inline_data part. */
-export function buildBase64Image(contentType: string, bytes: Buffer): { mime_type: string; data: string } {
-  return { mime_type: contentType, data: bytes.toString("base64") };
+export function buildBase64Image(contentType: string, bytes: Buffer): GeminiContentPart {
+  return { inline_data: { mime_type: contentType, data: bytes.toString("base64") } };
 }
 
 /** Convert a public/accessible image URL into a Gemini inline_data part. */
@@ -98,11 +98,11 @@ export async function geminiGenerateText(
   const data = await geminiFetch(":generateContent", body);
   const candidate = data?.candidates?.[0];
   const text: string = candidate?.content?.parts?.[0]?.text ?? "";
-  const usage: GeminiUsage = data?.usageMetadata
+  const usage: GeminiUsage | undefined = data?.usageMetadata
     ? {
-        promptTokens: data.usageMetadata.promptTokenCount,
-        candidatesTokens: data.usageMetadata.candidatesTokenCount,
-        totalTokens: data.usageMetadata.totalTokenCount,
+        promptTokens: data.usageMetadata.promptTokenCount ?? undefined,
+        candidatesTokens: data.usageMetadata.candidatesTokenCount ?? undefined,
+        totalTokens: data.usageMetadata.totalTokenCount ?? undefined,
       }
     : undefined;
   if (!text && !candidate) {
@@ -132,17 +132,28 @@ export async function geminiGenerateJson<T = any>(
   };
   const data = await geminiFetch(":generateContent", body);
   const text: string = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? "";
-  let parsed: T;
+  let parsed: T = {} as T;
   try {
-    parsed = typeof text === "string" && text.trim() ? (JSON.parse(text) as T) : ({} as T);
-  } catch {
+    if (!text || !text.trim()) {
+      console.warn("[geminiGenerateJson] empty JSON response; returning empty object.");
+    } else {
+      const safeText = text.trim();
+      const value = safeText.startsWith("```")
+        ? safeText.replace(/^```(?:json)?\s*/i, "").replace(/```$/, "")
+        : safeText;
+      parsed = JSON.parse(value) as T;
+    }
+  } catch (e) {
+    const sample = text.trim().slice(0, 200);
+    console.warn("[geminiGenerateJson] failed to parse JSON response; raw sample:", sample);
+    console.warn("[geminiGenerateJson] parse context: systemPrompt=%s tokens=%s schema=%s", typeof systemPrompt === "string" ? systemPrompt.length : "n/a", Array.isArray(contents) ? contents.length : 0, typeof schema === "object" ? "schema-present" : "schema-missing");
     parsed = {} as T;
   }
-  const usage: GeminiUsage = data?.usageMetadata
+  const usage: GeminiUsage | undefined = data?.usageMetadata
     ? {
-        promptTokens: data.usageMetadata.promptTokenCount,
-        candidatesTokens: data.usageMetadata.candidatesTokenCount,
-        totalTokens: data.usageMetadata.totalTokenCount,
+        promptTokens: data.usageMetadata.promptTokenCount ?? undefined,
+        candidatesTokens: data.usageMetadata.candidatesTokenCount ?? undefined,
+        totalTokens: data.usageMetadata.totalTokenCount ?? undefined,
       }
     : undefined;
   return { text, parsed, usage };

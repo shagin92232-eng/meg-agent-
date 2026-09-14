@@ -15,9 +15,7 @@ const nextConfig: NextConfig = {
       { hostname: "*.googleusercontent.com" },
     ],
   },
-  experimental: {
-    cacheComponents: true,
-  },
+  cacheComponents: true,
 };
 
 export default nextConfig;

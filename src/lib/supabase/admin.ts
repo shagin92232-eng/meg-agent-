@@ -15,6 +15,6 @@ export function createAdminClient() {
     throw new Error("SUPABASE_SERVICE_ROLE_KEY is not configured on the server.");
   }
   return createClient(env.supabase.url, env.supabase.serviceRoleKey, {
-    auth: { persist: false },
+    auth: { persistSession: false, autoRefreshToken: false },
   });
 }

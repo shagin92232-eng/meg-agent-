@@ -39,16 +39,22 @@ export interface ConversationContext {
 export async function buildConversationContext(orgId: string, conversationId: string): Promise<ConversationContext> {
   const supabase = createAdminClient();
 
-  const { data: conv } = await supabase
+  const { data: conv, error } = await supabase
     .from("conversations")
     .select("id,customer_id,page_id,ai_mode,status,ai_handled,human_handled,order_id,metadata")
     .eq("id", conversationId)
     .eq("org_id", orgId)
     .single<Conversation & { metadata: Record<string, unknown> }>();
 
+  if (!conv) {
+    console.log("[agent-context-debug] conversationId:", conversationId);
+    console.log("[agent-context-debug] orgId:", orgId);
+    console.log("[agent-context-debug] error:", error);
+  }
+
   const { data: messages } = await supabase
     .from("messages")
-    .select("id,sender_role,message_type,content,text_content,mime_type,url,file_name,metadata,created_at")
+    .select("id,sender_role,message_type,content,text_content,mime_type,url,metadata,created_at")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true });
 

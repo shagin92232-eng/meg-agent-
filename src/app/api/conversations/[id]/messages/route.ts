@@ -55,7 +55,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       sent_by_me: true,
     })
     .select("*")
-    .single<Message>();
+    .single();
+
+  if (inserted.error || !inserted.data) {
+    return jsonError(inserted.error?.message ?? "Failed to store message", 500);
+  }
+
+  const insertedData = inserted.data as Message;
 
   // Resolve customer PSID + page token to deliver to Messenger.
   const { data: conv } = await supabase.from("conversations").select("customer_id").eq("id", id).single();
@@ -74,14 +80,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
         for (const a of attachments) await sendMessengerAttachment(connection.page_id, connection.page_access_token, customer.psid, a.type as any, a.url);
       }
       delivered = true;
-      await supabase.from("messages").update({ status: "sent", mid, sent_by_me: true }).eq("id", inserted.id);
+      await supabase.from("messages").update({ status: "sent", mid, sent_by_me: true }).eq("id", insertedData.id);
     } catch (e: any) {
       console.error("[messages] send failed:", e?.message || e);
-      await supabase.from("messages").update({ status: "failed", metadata: { error: e?.message || String(e) } }).eq("id", inserted.id);
+      await supabase.from("messages").update({ status: "failed", metadata: { error: e?.message || String(e) } }).eq("id", insertedData.id);
     }
   }
   // Best-effort realtime presence handled by client subscription.
-  return json({ data: inserted, delivered });
+  return json({ data: insertedData, delivered });
 }
 
 type Message = {

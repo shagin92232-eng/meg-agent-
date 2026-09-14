@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
   const session = await getServerSession();
   if (!session) return jsonError("Unauthorized", 401);
 
-  const returnTo = request.nextUrl.searchParams.get("returnTo") || "/settings";
+  const returnTo = request.nextUrl.searchParams.get("returnTo") || "/dashboard/settings";
   const state = uniqueId("meta");
   const loginUrl = buildFacebookLoginUrl(state, returnTo);
 

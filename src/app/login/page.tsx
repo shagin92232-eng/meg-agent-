@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@/lib/supabase/client";
 import { MessageSquare, Loader2, ArrowRight } from "lucide-react";
 
@@ -10,30 +10,71 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+  const [notice, setNotice] = useState<string | null>(null);
+
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
+
+  useEffect(() => {
+    const supabase = createBrowserClient();
+    void supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        router.replace("/dashboard");
+      }
+    });
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (loading) return;
+
     setLoading(true);
     setError(null);
 
+    try {
+      const supabase = createBrowserClient();
+      const result = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      const signInError = result.error;
+      const sessionExists = Boolean(result.data.session);
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
+      }
+
+      if (sessionExists) {
+        router.replace("/dashboard");
+        router.refresh();
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to sign in. Please try again.";
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setError("Enter your email address to request a password reset.");
+      return;
+    }
+
     const supabase = createBrowserClient();
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login?reset=true`,
     });
 
-    setLoading(false);
-
-    if (signInError) {
-      setError(signInError.message);
-    } else {
-      router.push(callbackUrl);
-      router.refresh(); // Refresh to apply middleware state
+    if (error) {
+      setError(error.message);
+      setNotice(null);
+      return;
     }
+
+    setError(null);
+    setNotice("Password reset instructions were sent to your email.");
   };
 
   return (
@@ -76,9 +117,13 @@ export default function LoginPage() {
             <div className="input-group">
               <div className="flex justify-between items-center">
                 <label htmlFor="password">Password</label>
-                <a href="#" className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors">
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  className="text-xs text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors"
+                >
                   Forgot password?
-                </a>
+                </button>
               </div>
               <input
                 id="password"
@@ -92,6 +137,13 @@ export default function LoginPage() {
                 disabled={loading}
               />
             </div>
+
+            {notice && (
+              <div className="p-3 bg-[var(--success-bg)] border border-[var(--success)] text-[var(--success)] text-sm rounded-md animate-fade-in flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-[var(--success)] shrink-0"></div>
+                {notice}
+              </div>
+            )}
 
             {error && (
               <div className="p-3 bg-[var(--danger-bg)] border border-[var(--danger)] text-[var(--danger)] text-sm rounded-md animate-fade-in flex items-center gap-2">

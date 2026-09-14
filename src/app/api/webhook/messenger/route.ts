@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const signature = request.headers.get("X-Hub-Signature-256");
+  const signature = request.headers.get("X-Hub-Signature-256") ?? undefined;
   const raw = await request.text();
   const result = await handleMessengerPost(raw, signature);
   return new Response(JSON.stringify(result), {

@@ -28,17 +28,17 @@ export async function GET(request: Request) {
   return json({ data });
 }
 
-export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(request: Request) {
   const session = await getServerSession();
   if (!session) return jsonError("Unauthorized", 401);
   if (session.profile.role !== "owner" && session.profile.role !== "admin" && session.profile.role !== "support")
     return jsonError("Only owners/admins/support can update orders.", 403);
 
-  const { id } = await params;
   const body = await request.json().catch(() => ({}));
-  const { status, notes } = body;
-  const supabase = createAdminClient();
+  const { id, status, notes } = body;
+  if (!id) return jsonError("id is required", 400);
 
+  const supabase = createAdminClient();
   const updates: Record<string, unknown> = {};
   if (status !== undefined) updates.status = status;
   if (notes !== undefined) updates.notes = notes;

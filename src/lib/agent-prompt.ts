@@ -10,11 +10,12 @@
  * whole document), and old messages are condensed into a rolling summary.
  */
 import { formatHistory, type MessageRow } from "@/lib/agent-context";
-import { imageFromUrl, type GeminiContentPart } from "@/lib/gemini";
+import { imageFromUrl, type GeminiContent, type GeminiContentPart } from "@/lib/gemini";
 import { fetchBuffer } from "@/lib/media";
 import { extractFileText } from "@/lib/text-extract";
 import { truncate } from "@/lib/utils";
 import type { PageConnection } from "@/lib/meta-connections";
+import type { Customer, Order } from "@/types";
 
 type KbHit = { content: string; heading?: string | null; similarity: number };
 type ProductHit = { name: string; price?: number | null; currency?: string | null; description?: string | null; image_url?: string | null };
@@ -23,8 +24,8 @@ type Attachment = { type: string; url: string; mime_type?: string | null; file_n
 interface ContextLike {
   recent: MessageRow[];
   summary: string | null;
-  customer?: { name?: string | null; locale?: string | null; tags?: string[] } | null;
-  order?: { order_number: string; status: string; total_amount: number; currency: string } | null;
+  customer?: Customer | null;
+  order?: (Order & { order_items?: any[] }) | null;
 }
 
 export async function buildUserContent(
@@ -35,7 +36,7 @@ export async function buildUserContent(
   intent: { intent: string; confidence: number },
   orderIntent: { order_intent: boolean; product_hint?: string },
   connection: PageConnection | null
-): Promise<GeminiContentPart[]> {
+): Promise<GeminiContent[]> {
   const atts = (latest.metadata?.attachments as Attachment[] | undefined) ?? [];
   const token = connection?.page_access_token;
 
@@ -73,5 +74,5 @@ export async function buildUserContent(
       parts.push(part ?? { text: "[Customer sent an image.]" });
     }
   }
-  return parts;
+  return [{ role: "user", parts }];
 }
